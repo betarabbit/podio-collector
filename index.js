@@ -4,6 +4,7 @@ require('dotenv').config()
 const azure = require('azure-storage')
 const Podio = require('podio-js').api
 const config = require('./config')
+const camelcase = require('lodash.camelcase')
 
 const api = new Podio({
   authType: 'password',
@@ -14,8 +15,8 @@ const api = new Podio({
 const retryOperation = new azure.ExponentialRetryPolicyFilter()
 const tableService = azure.createTableService().withFilter(retryOperation)
 
-function collectCoursePool () {
-  return getPodioAppItems(config.course_pool_app_id)
+function collectCoursePool (api) {
+  return getPodioAppItems(api, config.course_pool_app_id)
     .then(data => data.map(
       item => item.fields.reduce(
         (acc, val) => Object.assign(
@@ -26,16 +27,16 @@ function collectCoursePool () {
     )
 }
 
-function collectCourseOffer () {
+function collectCourseOffer (api) {
   return Promise.all(config.offer.map(
-    offer => getPodioAppItems(offer.app_id)
+    offer => getPodioAppItems(api, offer.app_id)
       .then(data => data.map(
         item => item.fields.reduce(
           (acc, val) => Object.assign(
             acc,
             {
               id: item.item_id,
-              Year: offer.year
+              year: offer.year
             },
             { [val.label]: getValue(val) }
           ), {})
@@ -43,9 +44,9 @@ function collectCourseOffer () {
   ))
 }
 
-function collectTrainingPlan () {
+function collectTrainingPlan (api) {
   return Promise.all(config.team.map(
-    team => getPodioAppItems(team.app_id)
+    team => getPodioAppItems(api, team.app_id)
       .then(data => data.map(
         item => item.fields
           .filter(field => field.label === 'Attendee Name')
@@ -57,9 +58,9 @@ function collectTrainingPlan () {
                   acc,
                   {
                     id: item.item_id,
-                    Year: team.year,
-                    Team: team.name,
-                    'Attendee Name': getValue(field)
+                    year: team.year,
+                    team: team.name,
+                    attendeeName: getValue(field)
                   },
                   { [val.label]: getValue(val) }
                 ), {})
@@ -69,8 +70,8 @@ function collectTrainingPlan () {
   )
 }
 
-function collectData () {
-  return Promise.all([collectCoursePool(), collectCourseOffer(), collectTrainingPlan()])
+function collectData (api) {
+  return Promise.all([collectCoursePool(api), collectCourseOffer(api), collectTrainingPlan(api)])
     .then(values => {
       const [coursePool, courseOffer, trainingPlan] = values
       return {
@@ -79,18 +80,6 @@ function collectData () {
         trainingPlan: flatten(trainingPlan)
       }
     })
-}
-
-function deleteAzureTable (service, tableName) {
-  return new Promise((resolve, reject) =>
-    service.deleteTableIfExists(tableName, (err, response) => {
-      if (err) {
-        reject(err)
-      } else {
-        resolve(response)
-      }
-    })
-  )
 }
 
 function createAzureTable (service, tableName) {
@@ -105,30 +94,42 @@ function createAzureTable (service, tableName) {
   )
 }
 
-function uploadToAzure (data) {
-  data.map()
-
-  const batch = new azure.TableBatch()
+function uploadToAzure (azure, service, tableName, data) {
+  return createAzureTable(service, tableName)
+    .then(res => {
+      return Promise.all(data.map(d =>
+        new Promise((resolve, reject) => {
+          service.insertOrReplaceEntity(tableName, d, (err, result, response) => {
+            if (err) {
+              reject(err)
+            } else {
+              resolve({ result, response })
+            }
+          })
+        })
+      ))
+    })
 }
 
-function generateEntities (data, partitionKey, rowKey = 'id') {
+function generateEntities (azure, data, partitionKey, rowKey = 'id') {
   const entGen = azure.TableUtilities.entityGenerator
 
   return data.map(d => {
     const entity = Object.keys(d).reduce((acc, key) => {
+      const propertyName = camelcase(key.replace(/[()]/g, ' '))
       if (/^\d\d\d\d-\d\d-\d\d \d\d:\d\d:\d\d$/.test(d[key])) {
         // suppose this app only used in China office
-        acc[key] = entGen.DateTime(new Date(`${d[key]} GMT+0800`))
+        acc[propertyName] = entGen.DateTime(new Date(`${d[key]} GMT+0800`))
       } else {
-        acc[key] = entGen.String(d[key])
+        acc[propertyName] = entGen.String(d[key])
       }
 
       return acc
     }, {})
 
     return Object.assign(entity, {
-      PartitionKey: entGen.String(d[partitionKey] || partitionKey),
-      RowKey: entGen.String(d[rowKey])
+      PartitionKey: entGen.String((d[partitionKey] || partitionKey).toString()),
+      RowKey: entGen.String(d[rowKey].toString())
     })
   })
 }
@@ -154,7 +155,7 @@ function flatten (arr) {
   ), [])
 }
 
-function getPodioAppItems (appId) {
+function getPodioAppItems (api, appId) {
   const callApi = (offset = 0) => api.request('GET', `/item/app/${appId}?limit=500&offset=${offset}`)
   const retriveData = (result = []) => {
     return callApi(result.length)
@@ -175,11 +176,15 @@ function getPodioAppItems (appId) {
 
 api.authenticateWithCredentials(process.env.USERNAME, process.env.PASSWORD, (err) => {
   if (!err) {
-    collectData().then(data => {
+    collectData(api).then(data => {
       const {coursePool, courseOffer, trainingPlan} = data
-      console.log(generateEntities(coursePool, 'Course', 'id')[0])
-      console.log(generateEntities(courseOffer, 'Year', 'id')[0])
-      console.log(generateEntities(trainingPlan, 'Team', 'id')[0])
+
+      return Promise.all([
+        uploadToAzure(azure, tableService, 'CoursePool', generateEntities(azure, coursePool, 'Course', 'id')),
+        uploadToAzure(azure, tableService, 'CourseOffer', generateEntities(azure, courseOffer, 'Year', 'id')),
+        uploadToAzure(azure, tableService, 'TrainingPlan', generateEntities(azure, trainingPlan, 'Team', 'id'))
+      ]).then(() => console.log('Done'))
+        .catch(err => console.log(err))
     })
   }
 })
