@@ -1,0 +1,11 @@
+{
+  "course_pool_app_id": 15167722,
+  "team": [
+    { "name": "PI&A", "year": 2017, "app_id": 17575890 },
+    { "name": "LCM", "year": 2017, "app_id": 17540901 },
+    { "name": "Cloud Service", "year": 2017, "app_id": 17542821 }
+  ],
+  "offer": [
+    { "year": 2017, "app_id": 17575889 }
+  ]
+}

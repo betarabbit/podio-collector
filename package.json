@@ -1,0 +1,21 @@
+{
+  "name": "podio-collector",
+  "version": "1.0.0",
+  "description": "Tool for collecting Podio data",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": [
+    "podio",
+    "collect",
+    "data"
+  ],
+  "author": "Tianxiao Ma",
+  "license": "MIT",
+  "dependencies": {
+    "azure-storage": "^2.1.0",
+    "dotenv": "^4.0.0",
+    "podio-js": "^1.6.0"
+  }
+}
