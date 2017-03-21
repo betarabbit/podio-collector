@@ -73,6 +73,7 @@ function collectTrainingPlan (api) {
 function collectData (api) {
   return Promise.all([collectCoursePool(api), collectCourseOffer(api), collectTrainingPlan(api)])
     .then(values => {
+      console.log('All data clllected!')
       const [coursePool, courseOffer, trainingPlan] = values
       return {
         coursePool,
@@ -176,15 +177,19 @@ function getPodioAppItems (api, appId) {
 
 api.authenticateWithCredentials(process.env.USERNAME, process.env.PASSWORD, (err) => {
   if (!err) {
+    console.log('Start to collect Podio data...')
     collectData(api).then(data => {
       const {coursePool, courseOffer, trainingPlan} = data
 
+      console.log('Start to upload data to Azure Table Storage...')
       return Promise.all([
         uploadToAzure(azure, tableService, 'CoursePool', generateEntities(azure, coursePool, 'Course', 'id')),
         uploadToAzure(azure, tableService, 'CourseOffer', generateEntities(azure, courseOffer, 'Year', 'id')),
         uploadToAzure(azure, tableService, 'TrainingPlan', generateEntities(azure, trainingPlan, 'Team', 'id'))
-      ]).then(() => console.log('Done'))
+      ]).then(() => console.log('All done!'))
         .catch(err => console.log(err))
     })
+  } else {
+    console.log(err)
   }
 })
