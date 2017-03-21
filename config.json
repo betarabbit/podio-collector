@@ -1,9 +1,10 @@
 {
   "course_pool_app_id": 15167722,
   "team": [
-    { "name": "PI&A", "year": 2017, "app_id": 17575890 },
-    { "name": "LCM", "year": 2017, "app_id": 17540901 },
-    { "name": "Cloud Service", "year": 2017, "app_id": 17542821 }
+    { "name": "PI&A", "year": 2017, "space_id": 4598239, "app_id": 17575890 },
+    { "name": "LCM", "year": 2017, "space_id": 2883489, "app_id": 17540901 },
+    { "name": "Cloud Service", "year": 2017, "space_id": 4598609, "app_id": 17542821 },
+    { "name": "Automation Service", "year": 2017, "space_id": 5162171, "app_id": 17825431 }
   ],
   "offer": [
     { "year": 2017, "app_id": 17575889 }

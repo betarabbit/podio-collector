@@ -70,13 +70,29 @@ function collectTrainingPlan (api) {
   )
 }
 
+function collectTeamMembers (api) {
+  return Promise.all(config.team.map(
+    team => getPodioSpaceMembers(api, team.space_id)
+      .then(data => data
+        .filter(user => user.profile.name !== 'nkgDataCollector').map(
+        user => ({
+          id: user.profile.user_id,
+          team: team.name,
+          name: user.profile.name,
+          mail: Array.isArray(user.profile.mail) && user.profile.mail.length ? user.profile.mail[0] : ''
+        })
+      ))
+  ))
+}
+
 function collectData (api) {
-  return Promise.all([collectCoursePool(api), collectCourseOffer(api), collectTrainingPlan(api)])
+  return Promise.all([collectTeamMembers(api), collectCoursePool(api), collectCourseOffer(api), collectTrainingPlan(api)])
     .then(values => {
       console.log('All data clllected!')
-      const [coursePool, courseOffer, trainingPlan] = values
+      const [teamMember, coursePool, courseOffer, trainingPlan] = values
       return {
         coursePool,
+        teamMember: flatten(teamMember),
         courseOffer: flatten(courseOffer),
         trainingPlan: flatten(trainingPlan)
       }
@@ -129,8 +145,8 @@ function generateEntities (azure, data, partitionKey, rowKey = 'id') {
     }, {})
 
     return Object.assign(entity, {
-      PartitionKey: entGen.String((d[partitionKey] || partitionKey).toString()),
-      RowKey: entGen.String(d[rowKey].toString())
+      PartitionKey: entGen.String(String(d[partitionKey] || partitionKey)),
+      RowKey: entGen.String(String(d[rowKey].toString()))
     })
   })
 }
@@ -175,20 +191,24 @@ function getPodioAppItems (api, appId) {
   return retriveData()
 }
 
+function getPodioSpaceMembers (api, spaceId) {
+  return api.request('GET', `/space/${spaceId}/member/v2?limit=500`)
+}
+
 api.authenticateWithCredentials(process.env.USERNAME, process.env.PASSWORD, (err) => {
   if (!err) {
     console.log('Start to collect Podio data...')
     collectData(api).then(data => {
-      const {coursePool, courseOffer, trainingPlan} = data
+      const {teamMember, coursePool, courseOffer, trainingPlan} = data
 
       console.log('Start to upload data to Azure Table Storage...')
       return Promise.all([
-        uploadToAzure(azure, tableService, 'CoursePool', generateEntities(azure, coursePool, 'Course', 'id')),
-        uploadToAzure(azure, tableService, 'CourseOffer', generateEntities(azure, courseOffer, 'Year', 'id')),
-        uploadToAzure(azure, tableService, 'TrainingPlan', generateEntities(azure, trainingPlan, 'Team', 'id'))
+        uploadToAzure(azure, tableService, 'Team', generateEntities(azure, teamMember, 'team', 'id')),
+        uploadToAzure(azure, tableService, 'CoursePool', generateEntities(azure, coursePool, 'course', 'id')),
+        uploadToAzure(azure, tableService, 'CourseOffer', generateEntities(azure, courseOffer, 'year', 'id')),
+        uploadToAzure(azure, tableService, 'TrainingPlan', generateEntities(azure, trainingPlan, 'team', 'id'))
       ]).then(() => console.log('All done!'))
-        .catch(err => console.log(err))
-    })
+    }).catch(err => console.log(err))
   } else {
     console.log(err)
   }
