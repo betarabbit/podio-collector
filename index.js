@@ -51,22 +51,27 @@ function collectTrainingPlan (api) {
         item => item.fields
           .filter(field => field.label === 'Attendee Name')
           .map(
-            field => item.fields
-              .filter(field => field.label !== 'Attendee Name')
-              .reduce(
-                (acc, val) => Object.assign(
-                  acc,
+            field => field.values
+              .map(
+                attendee => Object.assign(
+                  item.fields
+                    .filter(field => field.label !== 'Attendee Name')
+                    .reduce(
+                      (acc, val) => Object.assign(
+                        acc,
+                        { [val.label]: getValue(val) }
+                      ), {}),
                   {
-                    id: item.item_id,
+                    id: `${item.item_id}_${attendee.value.user_id}`,
                     year: team.year,
                     team: team.name,
-                    attendeeName: getValue(field)
-                  },
-                  { [val.label]: getValue(val) }
-                ), {})
+                    attendeeName: attendee.value.name,
+                    attendeeEmail: Array.isArray(attendee.value.mail) && attendee.value.mail.length ? attendee.value.mail[0] : ''
+                  })
               )
           )
       ))
+    )
   )
 }
 
@@ -138,7 +143,7 @@ function generateEntities (azure, data, partitionKey, rowKey = 'id') {
         // suppose this app only used in China office
         acc[propertyName] = entGen.DateTime(new Date(`${d[key]} GMT+0800`))
       } else {
-        acc[propertyName] = entGen.String(d[key])
+        acc[propertyName] = entGen.String(String(d[key]))
       }
 
       return acc
@@ -146,7 +151,7 @@ function generateEntities (azure, data, partitionKey, rowKey = 'id') {
 
     return Object.assign(entity, {
       PartitionKey: entGen.String(String(d[partitionKey] || partitionKey)),
-      RowKey: entGen.String(String(d[rowKey].toString()))
+      RowKey: entGen.String(String(d[rowKey]))
     })
   })
 }
