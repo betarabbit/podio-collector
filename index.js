@@ -21,7 +21,10 @@ function collectCoursePool (api) {
       item => item.fields.reduce(
         (acc, val) => Object.assign(
           acc,
-          { id: item.item_id },
+          {
+            id: item.item_id,
+            courseId: item.app_item_id_formatted
+          },
           { [val.label]: getValue(val) }
         ), {}))
     )
@@ -36,6 +39,7 @@ function collectCourseOffer (api) {
             acc,
             {
               id: item.item_id,
+              OfferId: item.app_item_id_formatted,
               year: offer.year
             },
             { [val.label]: getValue(val) }
@@ -54,20 +58,22 @@ function collectTrainingPlan (api) {
             field => field.values
               .map(
                 attendee => Object.assign(
+                  {
+                    id: `${item.item_id}_${attendee.value.user_id}`,
+                    planId: `${team.name.toUpperCase()}_${team.year}_${item.app_item_id_formatted}`,
+                    year: team.year,
+                    team: team.name,
+                    attendeeName: attendee.value.name,
+                    attendeeEmail: Array.isArray(attendee.value.mail) && attendee.value.mail.length ? attendee.value.mail[0] : ''
+                  },
                   item.fields
                     .filter(field => field.label !== 'Attendee Name')
                     .reduce(
                       (acc, val) => Object.assign(
                         acc,
                         { [val.label]: getValue(val) }
-                      ), {}),
-                  {
-                    id: `${item.item_id}_${attendee.value.user_id}`,
-                    year: team.year,
-                    team: team.name,
-                    attendeeName: attendee.value.name,
-                    attendeeEmail: Array.isArray(attendee.value.mail) && attendee.value.mail.length ? attendee.value.mail[0] : ''
-                  })
+                      ), {})
+                )
               )
           )
       ))
@@ -84,6 +90,7 @@ function collectTeamMembers (api) {
           id: user.profile.user_id,
           team: team.name,
           name: user.profile.name,
+          employee: user.employee,
           mail: Array.isArray(user.profile.mail) && user.profile.mail.length ? user.profile.mail[0] : ''
         })
       ))
@@ -93,7 +100,7 @@ function collectTeamMembers (api) {
 function collectData (api) {
   return Promise.all([collectTeamMembers(api), collectCoursePool(api), collectCourseOffer(api), collectTrainingPlan(api)])
     .then(values => {
-      console.log('All data clllected!')
+      console.log('All data colllected!')
       const [teamMember, coursePool, courseOffer, trainingPlan] = values
       return {
         coursePool,
@@ -139,9 +146,12 @@ function generateEntities (azure, data, partitionKey, rowKey = 'id') {
   return data.map(d => {
     const entity = Object.keys(d).reduce((acc, key) => {
       const propertyName = camelcase(key.replace(/[()]/g, ' '))
+
       if (/^\d\d\d\d-\d\d-\d\d \d\d:\d\d:\d\d$/.test(d[key])) {
         // suppose this app only used in China office
         acc[propertyName] = entGen.DateTime(new Date(`${d[key]} GMT+0800`))
+      } else if (typeof d[key] === 'boolean') {
+        acc[propertyName] = entGen.Boolean(d[key])
       } else {
         acc[propertyName] = entGen.String(String(d[key]))
       }
