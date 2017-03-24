@@ -23,9 +23,13 @@ function collectCoursePool (api) {
           acc,
           {
             id: item.item_id,
-            courseId: item.app_item_id_formatted
+            courseId: item.app_item_id_formatted,
+            createdByUserId: item.created_by.user_id,
+            createdByUserName: item.created_by.name,
+            createdOn: item.created_on,
+            tags: item.tags.join(',')
           },
-          { [val.label]: getValue(val) }
+          getField(val)
         ), {}))
     )
 }
@@ -40,9 +44,13 @@ function collectCourseOffer (api) {
             {
               id: item.item_id,
               OfferId: item.app_item_id_formatted,
-              year: offer.year
+              year: offer.year,
+              createdByUserId: item.created_by.user_id,
+              createdByUserName: item.created_by.name,
+              createdOn: item.created_on,
+              tags: item.tags.join(',')
             },
-            { [val.label]: getValue(val) }
+            getField(val)
           ), {})
       ))
   ))
@@ -63,15 +71,19 @@ function collectTrainingPlan (api) {
                     planId: `${team.name.toUpperCase()}_${team.year}_${item.app_item_id_formatted}`,
                     year: team.year,
                     team: team.name,
+                    createdByUserId: item.created_by.user_id,
+                    createdByUserName: item.created_by.name,
+                    createdOn: item.created_on,
                     attendeeName: attendee.value.name,
-                    attendeeEmail: Array.isArray(attendee.value.mail) && attendee.value.mail.length ? attendee.value.mail[0] : ''
+                    attendeeEmail: Array.isArray(attendee.value.mail) && attendee.value.mail.length ? attendee.value.mail[0] : '',
+                    tags: item.tags.join(',')
                   },
                   item.fields
                     .filter(field => field.label !== 'Attendee Name')
                     .reduce(
                       (acc, val) => Object.assign(
                         acc,
-                        { [val.label]: getValue(val) }
+                        getField(val)
                       ), {})
                 )
               )
@@ -166,18 +178,23 @@ function generateEntities (azure, data, partitionKey, rowKey = 'id') {
   })
 }
 
-function getValue (field) {
+function getField (field) {
   switch (field.type) {
     case 'app':
-      return field.values[0].value.title
+      return { [field.label]: field.values[0].value.title }
     case 'category':
-      return field.values[0].value.text
+      return { [field.label]: field.values[0].value.text }
     case 'date':
-      return field.values[0].start
+      return { [field.label]: field.values[0].start }
     case 'contact':
-      return field.values[0].value.name
+      return { [field.label]: field.values[0].value.name }
+    case 'money':
+      return {
+        [`${field.label}Currency`]: field.values[0].currency,
+        [`${field.label}Amount`]: field.values[0].value
+      }
     default:
-      return field.values[0].value
+      return { [field.label]: field.values[0].value }
   }
 }
 
@@ -188,7 +205,7 @@ function flatten (arr) {
 }
 
 function getPodioAppItems (api, appId) {
-  const callApi = (offset = 0) => api.request('GET', `/item/app/${appId}?limit=500&offset=${offset}`)
+  const callApi = (offset = 0) => api.request('GET', `/item/app/${appId}?fields=items.fields(tags)&limit=500&offset=${offset}`)
   const retriveData = (result = []) => {
     return callApi(result.length)
       .then(data => {
