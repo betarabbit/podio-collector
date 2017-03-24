@@ -3,8 +3,15 @@
   "team": [
     { "name": "PI&A", "year": 2017, "space_id": 4598239, "app_id": 17575890 },
     { "name": "LCM", "year": 2017, "space_id": 2883489, "app_id": 17540901 },
-    { "name": "Cloud Service", "year": 2017, "space_id": 4598609, "app_id": 17542821 },
-    { "name": "Automation Service", "year": 2017, "space_id": 5162171, "app_id": 17825431 }
+    { "name": "Cloud Services", "year": 2017, "space_id": 4598609, "app_id": 17542821 },
+    { "name": "Automation Service", "year": 2017, "space_id": 5162171, "app_id": 17825431 },
+    { "name": "AddDiskDP", "year": 2017, "space_id": 4916665, "app_id": 17575970  },
+    { "name": "Technical Support", "year": 2017, "space_id": 392800, "app_id": 17587525 },
+    { "name": "PDD", "year": 2017, "space_id": 4989945, "app_id": 17596013 },
+    { "name": "GS", "year": 2017, "space_id": 4596071, "app_id": 17541013 },
+    { "name": "Receiver", "year": 2017, "space_id": 4917366, "app_id": 17856786 },
+    { "name": "XenServer", "year": 2017, "space_id": 4595977, "app_id": 17680131 },
+    { "name": "XD Cloud Service", "year": 2017, "space_id": 4987687, "app_id": 17576004 }
   ],
   "offer": [
     { "year": 2017, "app_id": 17575889 }
