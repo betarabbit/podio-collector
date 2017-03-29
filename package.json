@@ -18,6 +18,7 @@
     "dotenv": "^4.0.0",
     "lodash.camelcase": "^4.3.0",
     "lodash.capitalize": "^4.2.1",
-    "podio-js": "^1.6.0"
+    "podio-js": "^1.6.0",
+    "winston": "^2.3.1"
   }
 }

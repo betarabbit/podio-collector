@@ -5,6 +5,7 @@ const azure = require('azure-storage')
 const Podio = require('podio-js').api
 const config = require('./config')
 const camelcase = require('lodash.camelcase')
+const logger = require('./utils/logger')
 
 const api = new Podio({
   authType: 'password',
@@ -112,7 +113,7 @@ function collectTeamMembers (api) {
 function collectData (api) {
   return Promise.all([collectTeamMembers(api), collectCoursePool(api), collectCourseOffer(api), collectTrainingPlan(api)])
     .then(values => {
-      console.log('All data colllected!')
+      logger.info('All data colllected!')
       const [teamMember, coursePool, courseOffer, trainingPlan] = values
       return {
         coursePool,
@@ -217,7 +218,7 @@ function getPodioAppItems (api, appId) {
           return result
         }
       })
-      .catch(err => console.log(err))
+      .catch(err => logger.error(err))
   }
 
   return retriveData()
@@ -229,19 +230,19 @@ function getPodioSpaceMembers (api, spaceId) {
 
 api.authenticateWithCredentials(process.env.USERNAME, process.env.PASSWORD, (err) => {
   if (!err) {
-    console.log('Start to collect Podio data...')
+    logger.info('Start to collect Podio data...')
     collectData(api).then(data => {
       const {teamMember, coursePool, courseOffer, trainingPlan} = data
 
-      console.log('Start to upload data to Azure Table Storage...')
+      logger.info('Start to upload data to Azure Table Storage...')
       return Promise.all([
         uploadToAzure(azure, tableService, 'Team', generateEntities(azure, teamMember, 'team', 'id')),
         uploadToAzure(azure, tableService, 'CoursePool', generateEntities(azure, coursePool, 'course', 'id')),
         uploadToAzure(azure, tableService, 'CourseOffer', generateEntities(azure, courseOffer, 'year', 'id')),
         uploadToAzure(azure, tableService, 'TrainingPlan', generateEntities(azure, trainingPlan, 'team', 'id'))
-      ]).then(() => console.log('All done!'))
-    }).catch(err => console.log(err))
+      ]).then(() => logger.info('All done!'))
+    }).catch(err => logger.error(err))
   } else {
-    console.log(err)
+    logger.error(err)
   }
 })
