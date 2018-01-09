@@ -1,0 +1,7 @@
+{
+  "name": "podio-data-collector",
+  "script": "index.js",
+  "exec_mode": "cluster_mode",
+  "instances": 1,
+  "cron_restart": "30 * * * *"
+}

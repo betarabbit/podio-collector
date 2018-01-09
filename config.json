@@ -11,9 +11,17 @@
     { "name": "GS", "year": 2017, "space_id": 4596071, "app_id": 17541013 },
     { "name": "Receiver", "year": 2017, "space_id": 4917366, "app_id": 17856786 },
     { "name": "XenServer", "year": 2017, "space_id": 4595977, "app_id": 17680131 },
-    { "name": "XD Cloud Service", "year": 2017, "space_id": 4987687, "app_id": 17576004 }
+    { "name": "XD Cloud Service", "year": 2017, "space_id": 4987687, "app_id": 17576004 },
+    { "name": "Analytics Services", "year": 2018, "space_id": 4598239, "app_id": 20132822 },
+    { "name": "Client", "year": 2018, "space_id": 5804017, "app_id": 20137597 },
+    { "name": "TS", "year": 2018, "space_id": 392800, "app_id": 20152679 },
+    { "name": "LCM", "year": 2018, "space_id": 2883489, "app_id": 20151989 },
+    { "name": "Shared Service", "year": 2018, "space_id": 4596071, "app_id": 20137478 },
+    { "name": "XenServer", "year": 2018, "space_id": 4595977, "app_id": 20164076 },
+    { "name": "Cloud Services", "year": 2018, "space_id": 4598609, "app_id": 20164164 }
   ],
   "offer": [
-    { "year": 2017, "app_id": 17575889 }
+    { "year": 2017, "app_id": 17575889 },
+    { "year": 2018, "app_id": 20132711 }
   ]
 }
